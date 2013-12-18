@@ -12,7 +12,7 @@ N = rn.randint(7,11)
 xdata = np.array([])
 ydata = np.array([])
 
-for i in range(1):
+for i in range(N):
     
     mean = (rn.uniform(-10,10), rn.uniform(-10,10))
     var = rn.uniform(0,.5)

@@ -1,10 +1,26 @@
-# assumes 2D data
+# kMeans implentation that creates a N dimensional data set
+# and runs a vectorized kMeans algorithm on the data.  Will try different cluster
+# numbers.
 
 import numpy as np
 import random as rn
 import matplotlib.pyplot as plt
 import pickle
 from math import sqrt
+
+# functions to implement:
+
+def createDataSet(N, dims):
+
+def distance(point1, point2):
+
+def initializeCentroids():
+
+def findClosestCentroids():
+
+def computeMeans():
+
+
 
 
 def distance(point1, point2):
