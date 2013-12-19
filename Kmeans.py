@@ -5,17 +5,16 @@
 import numpy as np
 import random as rn
 import matplotlib.pyplot as plt
-import pickle
 from math import sqrt
 
 # functions to implement:
 
-def createDataSet(Nclusters=5, Npoints=100, dims=2, maxMean = 10, var = 1):
+def createDataSet(Nclusters=5, Npoints=100, dims=2, maxMean = 10.0, var = 1.0):
     ''' Nclusters is the number of clusters to simulate
     Each cluster has (0.5,1.5) * Npoints 
     dims is the dimensionality of the data
     Data for each cluster is sampled from a multivariate gaussian 
-    (diagonal cov matrix) with mean in [-maxMean, maxMean) with variance in [0+var/10,var)
+    (diagonal cov matrix) with mean in [-maxMean, maxMean) with variance in [0+0.5*var,1.5*var)
     Returns an array with the data '''
 
     Ncluster_points = [rn.randint(0.5*Npoints,1.5*Npoints) for x in range(Nclusters)]
@@ -27,12 +26,12 @@ def createDataSet(Nclusters=5, Npoints=100, dims=2, maxMean = 10, var = 1):
     for i in range(Nclusters):  # loop over each cluster
 
         mean = np.random.uniform(-maxMean, maxMean, dims)
-        variance = np.random.uniform(0+var/10,var,1)
+        variance = np.random.uniform(0+0.5*var,1.5*var,1)
         cov = np.identity(dims)*variance
         Num_points_in_cluster = Ncluster_points[i]
 
         cluster_points = np.random.multivariate_normal(mean,cov,Num_points_in_cluster)
-        data[Ncounter:Ncounter+Ncluster_points[i],:] = cluster_points
+        data[Ncounter:Ncounter + Ncluster_points[i],:] = cluster_points
         Ncounter = Ncounter + Ncluster_points[i]
 
     return data
@@ -40,7 +39,16 @@ def createDataSet(Nclusters=5, Npoints=100, dims=2, maxMean = 10, var = 1):
 def distance(point1, point2):
     ''' Calculates the Euclidean distance between two data points
     '''
-    return sqrt(np.dot(point1, point2))
+    return sqrt(sum(np.square(point1-point2)))
+
+def array_distance(data_array, point):
+
+    distance_array = np.zeros(np.size(data_array,0))
+
+    for index,elem in enumerate(data_array):
+        distance_array[index] = distance(elem, point)
+
+    return distance_array
 
 def initializeCentroids(data, Nclusters):
     ''' Initialize the means by randomly selecting Ncluster points from the 
@@ -53,114 +61,87 @@ def initializeCentroids(data, Nclusters):
 
     return data[random_sample,:]
 
+def findClosestCentroids(data, centroids):
+    '''  Given the data and the locations of centroids, calculates the closest
+    centroid for each data point.  Returns a vector containing the list of 
+    closest centroids. '''
 
+    Nrecords = np.size(data,0)
+    C = np.zeros(Nrecords)
 
-
-dataSet = createDataSet(5,100,5,10,1)
-print dataSet
-
-#def initializeCentroids():
-#def findClosestCentroids():
-#def computeMeans():
-#def kMeans():
-#def evaluateFit():
-'''
-
-
-def change(means, new_means):
-    sum_d = 0
-    for index in range(len(means)):
-        sum_d += distance(means[index], new_means[index])
-    return sum_d
-    
-def plot_clusters(data, means):
-    x_val = [x[0] for x in data]
-    y_val = [x[1] for x in data]
-
-    x_means = [x[0] for x in means]
-    y_means = [x[1] for x in means]
-
-    plt.plot(x_val,y_val,'b.',x_means, y_means, 'ro') 
-    plt.axis([-15, 15, -15, 15])
-    plt.show()
-
-def find_closest_cluster(data, means):
-    for x in data:
+    for i in range(Nrecords):
         min_index = -1
-        min_distance = 9999
-        for index, c_point in enumerate(means):
-            if distance(x[0:2], c_point) < min_distance:
-                min_distance = distance(x[0:2], c_point)
-                min_index = index
-                x[2] = min_index
+        min_distance = None
+        point = data[i,:]
 
-def find_new_cluster_points(data, means, new_means):
-    for x in data:
-        new_means[x[2]][0] += x[0]
-        new_means[x[2]][1] += x[1]
-        new_means[x[2]][2] += 1
+        dists = array_distance(centroids, point)
+        C[i] = dists.argmin()
 
-    for index, cluster in enumerate(new_means):
-        if cluster[2] > 0:
-            cluster[0] = cluster[0]/cluster[2]
-            cluster[1] = cluster[1]/cluster[2]
-        else:
-            cluster[0:2] = means[index]
+    return C
 
 
-            
+def computeMeans(data, C, centroids):
 
-def Kmeans(data, NumC):
+    new_centroids = np.zeros_like(centroids)
+    Ncentroids = np.size(centroids,0)
+
+    for i in range(Ncentroids):
+        index = (C == i)
+        new_centroids[i,:] = sum(data[index],0)/sum(index)
+        # possible error here if no points assigned to centroid - divide by zero
+        # not a problem when a lot of points?
+
+    return new_centroids
+
+def evaluateMeanChange(old_centroids, new_centroids):
+    ''' Use this function to evaluate convergence.  It gives a scalar that is the sum 
+    distance between centroids and new_centroids.  sum_dist should tend to 0 as the 
+    kMeans converges.'''
+
+    sum_dist = 0
+    for index in range(np.size(old_centroids,0)):
+        sum_dist += distance(old_centroids[index,:],new_centroids[index,:])
+
+    return sum_dist
+
+def kMeans(data, NClusterGuess):
+    ''' Runs kMeans once. Returns the final centroid positions 
+    '''
+    
     count = 0
-    go = True
+    centroids = initializeCentroids(dataSet, NClusterGuess)
 
-    means = np.array([ [0.0,0.0] for i in range(NumC)])
-    initialize_means(data, NumC, means)
 
-    #print 'Initial Clusters'
-    #print 'Num Clusters:', NumC
-    #plot_clusters(data, means)
-    
-    while go == True:
-        count += 1
-        new_means = np.array([ [0.0,0.0,0.0] for items in means])
-
-        find_closest_cluster(data, means)
-        find_new_cluster_points(data, means, new_means)
-
-        distance  = change(means, new_means[:, [0,1]])
+    while True:
+        C = findClosestCentroids(dataSet, centroids)
+        new_centroids = computeMeans(dataSet, C, centroids)
+        change = evaluateMeanChange(centroids, new_centroids)
+        print change
         
-        if distance < .0001: go = False
-        if count > 20: go = False
+        plt.hold(True)
+        plt.plot(dataSet[:,0], dataSet[:,1], 'bo')
+        plt.plot(centroids[:,0], centroids[:,1], 'ro')
+        plt.axis('equal')
+        plt.show()
 
-        means = new_means[:, [0,1]]
+        raw_input('Press <ENTER> to continue')
 
-        if count%3==5:
-            plot_clusters(data, means)
-            print 'Iters:', count
-            print 'Update distance =', distance
+        centroids = new_centroids
+        count += 1
 
-    #print 'Final Clusters'
-    #plot_clusters(data, means)
-    #print 'Iters:', count
-    #print 'Update distance =', distance
-    
-    return means
+        # I should use a % change but this will work for now.
+        if ((count > 20) or (change < .0001)): break
 
-def EvaluateFit(data, means):
-    tot_distance = 0
-    for index, point in enumerate(means):
-        for datapoint in data:
-            if datapoint[2] == index:
-                tot_distance += distance(point, datapoint[0:2])
+    return centroids
 
-    return tot_distance
-    
-# Load cluster data from pickle file
-[data, N] = pickle.load(open('ClusteringDataLowVar.pkl','r'))
-data = np.insert(data, 2, values=-1, axis=1)  # add an extra column for cluster ID
-np.random.shuffle(data) # Shuffle for no good reason except debugging
 
+dataSet = createDataSet(5,50,2,10,1)
+final_centroids = kMeans(dataSet, 5)
+
+
+
+
+'''
 # Cluster numbers to test
 Nrange = range(3,25)
 
