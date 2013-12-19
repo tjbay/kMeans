@@ -10,30 +10,62 @@ from math import sqrt
 
 # functions to implement:
 
-def createDataSet(N, dims):
+def createDataSet(Nclusters=5, Npoints=100, dims=2, maxMean = 10, var = 1):
+    ''' Nclusters is the number of clusters to simulate
+    Each cluster has (0.5,1.5) * Npoints 
+    dims is the dimensionality of the data
+    Data for each cluster is sampled from a multivariate gaussian 
+    (diagonal cov matrix) with mean in [-maxMean, maxMean) with variance in [0+var/10,var)
+    Returns an array with the data '''
+
+    Ncluster_points = [rn.randint(0.5*Npoints,1.5*Npoints) for x in range(Nclusters)]
+    total_records = sum(Ncluster_points)
+    data = np.zeros((total_records,dims))
+
+    Ncounter = 0
+
+    for i in range(Nclusters):  # loop over each cluster
+
+        mean = np.random.uniform(-maxMean, maxMean, dims)
+        variance = np.random.uniform(0+var/10,var,1)
+        cov = np.identity(dims)*variance
+        Num_points_in_cluster = Ncluster_points[i]
+
+        cluster_points = np.random.multivariate_normal(mean,cov,Num_points_in_cluster)
+        data[Ncounter:Ncounter+Ncluster_points[i],:] = cluster_points
+        Ncounter = Ncounter + Ncluster_points[i]
+
+    return data
 
 def distance(point1, point2):
+    ''' Calculates the Euclidean distance between two data points
+    '''
+    return sqrt(np.dot(point1, point2))
 
-def initializeCentroids():
+def initializeCentroids(data, Nclusters):
+    ''' Initialize the means by randomly selecting Ncluster points from the 
+    data without replacement.  Later versions might use smarter methods.'''
 
-def findClosestCentroids():
+    Nrecords = np.size(data,0)
+    test_array = range(Nrecords);
 
-def computeMeans():
+    random_sample = np.random.choice(test_array, Nclusters, replace=False)
+
+    return data[random_sample,:]
 
 
 
 
-def distance(point1, point2):
-    #Calculate Euclidean distance between two vectors
-    if len(point1) != len(point2):
-        print 'Distance: Not the same dimensionality'
-        return -1
-    
-    sum = 0
-    for i in range(len(point1)):
-        sum += (point1[i]-point2[i])**2
+dataSet = createDataSet(5,100,5,10,1)
+print dataSet
 
-    return sqrt(sum)
+#def initializeCentroids():
+#def findClosestCentroids():
+#def computeMeans():
+#def kMeans():
+#def evaluateFit():
+'''
+
 
 def change(means, new_means):
     sum_d = 0
@@ -75,13 +107,7 @@ def find_new_cluster_points(data, means, new_means):
         else:
             cluster[0:2] = means[index]
 
-def initialize_means(data, NumC, means):
-    
-    while len(np.unique(means)) < len(means):
-        for x in means:
-            temp = rn.randint(0,len(data)-1)
-            x[0] = data[temp][0]
-            x[1] = data[temp][1]
+
             
 
 def Kmeans(data, NumC):
@@ -156,5 +182,5 @@ plt.xlabel('Number of clusters', fontsize=15)
 plt.ylabel('Average Fit Error(lower is better)', fontsize=15)
 plt.show()
 
-
+'''
 
