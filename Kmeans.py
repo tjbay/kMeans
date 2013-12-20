@@ -4,20 +4,19 @@
 
 import numpy as np
 import random as rn
-import matplotlib.pyplot as plt
 from math import sqrt
 
 # functions to implement:
 
 def createDataSet(Nclusters=5, Npoints=100, dims=2, maxMean = 10.0, var = 1.0):
-    ''' Nclusters is the number of clusters to simulate
-    Each cluster has (0.5,1.5) * Npoints 
-    dims is the dimensionality of the data
-    Data for each cluster is sampled from a multivariate gaussian 
+    ''' Nclusters is the number of clusters to simulate.
+    Each cluster has (0.5,1.5) * Npoints.
+    dims is the dimensionality of the data.
+    Data for each cluster is sampled from a multivariate gaussian. 
     (diagonal cov matrix) with mean in [-maxMean, maxMean) with variance in [0+0.5*var,1.5*var)
     Returns an array with the data '''
 
-    Ncluster_points = [rn.randint(0.5*Npoints,1.5*Npoints) for x in range(Nclusters)]
+    Ncluster_points = [rn.randint(int(0.5*Npoints),int(1.5*Npoints)) for x in range(Nclusters)]
     total_records = sum(Ncluster_points)
     data = np.zeros((total_records,dims))
 
@@ -42,6 +41,8 @@ def distance(point1, point2):
     return sqrt(sum(np.square(point1-point2)))
 
 def array_distance(data_array, point):
+    ''' Given an array of points, returns an array containing the distance between a single
+    point and every item of the array.  Uses a loop.'''
 
     distance_array = np.zeros(np.size(data_array,0))
 
@@ -81,6 +82,9 @@ def findClosestCentroids(data, centroids):
 
 
 def computeMeans(data, C, centroids):
+    ''' Given the data points, the current centroids and the assignments of points to 
+    centroids, this computes the new centroids by find the means of the points assigned
+    to each centroid.'''
 
     new_centroids = np.zeros_like(centroids)
     Ncentroids = np.size(centroids,0)
@@ -93,75 +97,46 @@ def computeMeans(data, C, centroids):
 
     return new_centroids
 
-def evaluateMeanChange(old_centroids, new_centroids):
-    ''' Use this function to evaluate convergence.  It gives a scalar that is the sum 
-    distance between centroids and new_centroids.  sum_dist should tend to 0 as the 
-    kMeans converges.'''
+def costFunction(data, C, centroids):
+    ''' Calculates the average distance from each point in the data to its assigned 
+    centroid.  Should monotonically decrease.  Use it instead of evaluateMeanChange()?'''
 
-    sum_dist = 0
-    for index in range(np.size(old_centroids,0)):
-        sum_dist += distance(old_centroids[index,:],new_centroids[index,:])
+    sum = 0
+    Npoints = np.size(data,0)
 
-    return sum_dist
+    for i in range(Npoints):
+        point = data[i, :]
+        centr = centroids[C[i]]
+        sum += distance(point, centr)
+
+    return sum/Npoints
+
 
 def kMeans(data, NClusterGuess):
-    ''' Runs kMeans once. Returns the final centroid positions 
+    ''' Runs kMeans once. Returns the final centroid positions and cost.
     '''
     
     count = 0
-    centroids = initializeCentroids(dataSet, NClusterGuess)
-
+    centroids = initializeCentroids(data, NClusterGuess)
+    Cinit = findClosestCentroids(data, centroids)
+    cost = costFunction(data, Cinit, centroids)
 
     while True:
-        C = findClosestCentroids(dataSet, centroids)
-        new_centroids = computeMeans(dataSet, C, centroids)
-        change = evaluateMeanChange(centroids, new_centroids)
-        print change
+        C = findClosestCentroids(data, centroids)
+        new_centroids = computeMeans(data, C, centroids)
+
+        new_cost = costFunction(data, C, new_centroids)
         
-        plt.hold(True)
-        plt.plot(dataSet[:,0], dataSet[:,1], 'bo')
-        plt.plot(centroids[:,0], centroids[:,1], 'ro')
-        plt.axis('equal')
-        plt.show()
-
-        raw_input('Press <ENTER> to continue')
-
         centroids = new_centroids
         count += 1
 
+        cost_p_change = (1.0)*(cost-new_cost)/cost
+        #print "Cost =", cost
+        cost = new_cost
+
         # I should use a % change but this will work for now.
-        if ((count > 20) or (change < .0001)): break
+        if (count > 20) or (cost_p_change < .0000001):
+            #print "Cost =", cost
+            break
 
-    return centroids
-
-
-dataSet = createDataSet(5,50,2,10,1)
-final_centroids = kMeans(dataSet, 5)
-
-
-
-
-'''
-# Cluster numbers to test
-Nrange = range(3,25)
-
-# Number of times to run the average for each number of clusters
-average_num = 10
-
-average_fit = [0 for i in Nrange]
-
-for index, NumC in enumerate(Nrange):
-    print 'Testing Number of Clusters =', NumC
-    fit_sum = 0
-    for i in range(average_num):
-        cluster_result = Kmeans(data, NumC)
-        fit_sum += EvaluateFit(data, cluster_result)
-    average_fit[index] = fit_sum/average_num
-        
-plt.plot(Nrange, average_fit, 'bo')
-plt.xlabel('Number of clusters', fontsize=15)
-plt.ylabel('Average Fit Error(lower is better)', fontsize=15)
-plt.show()
-
-'''
-
+    return centroids, cost
